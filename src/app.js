@@ -16,11 +16,24 @@ const allowedOrigins = process.env.FRONTEND_URL
   ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
   : ['http://localhost:3000'];
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (process.env.NODE_ENV === 'development') return true;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.hostname.endsWith('.vercel.app') || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return true;
+    }
+  } catch {
+    // invalid URL format
+  }
+  return false;
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
     return callback(new Error(`CORS policy violation: Origin ${origin} is not allowed.`));
@@ -42,6 +55,15 @@ if (process.env.NODE_ENV === 'development') {
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Root health check route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Kunal Sarees Wholesale API is active and running',
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Mount API routes under /api
 app.use('/api', routes);

@@ -202,7 +202,7 @@ const getValidFromEmail = () => {
     !configured ||
     /@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com)/i.test(configured)
   ) {
-    return 'Kunal Sarees <onboarding@resend.dev>';
+    return 'Kunal Sarees <mail@kunalsarees.in>';
   }
   return configured;
 };
@@ -238,7 +238,7 @@ const getSmtpTransporter = () => {
  */
 const sendPasswordResetEmail = async ({ to, name, resetUrl, userType = 'customer' }) => {
   const fromEmail = getValidFromEmail();
-  const subject = userType === 'admin' 
+  const subject = userType === 'admin'
     ? '🔐 Password Reset Request - Kunal Sarees Admin'
     : '🔐 Password Reset Request - Kunal Sarees Wholesale';
 
