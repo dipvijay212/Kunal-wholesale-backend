@@ -22,7 +22,14 @@ const isAllowedOrigin = (origin) => {
   if (allowedOrigins.includes(origin)) return true;
   try {
     const parsed = new URL(origin);
-    if (parsed.hostname.endsWith('.vercel.app') || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === 'kunalsarees.in' ||
+      host.endsWith('.kunalsarees.in') ||
+      host.endsWith('.vercel.app') ||
+      host === 'localhost' ||
+      host === '127.0.0.1'
+    ) {
       return true;
     }
   } catch {
@@ -40,10 +47,11 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // HTTP Request Logger
 if (process.env.NODE_ENV === 'development') {
