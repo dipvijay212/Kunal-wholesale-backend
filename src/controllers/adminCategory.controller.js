@@ -68,12 +68,25 @@ const updateCategory = async (req, res, next) => {
       category.slug = slug.trim().toLowerCase();
     }
 
-    if (name) category.name = name.trim();
-    if (name_en !== undefined || nameEn !== undefined) category.nameEn = (name_en || nameEn || '').trim() || null;
-    if (name_hi !== undefined || nameHi !== undefined) category.nameHi = (name_hi || nameHi || '').trim() || null;
-    if (description !== undefined) category.description = description ? description.trim() : null;
-    if (description_en !== undefined || descriptionEn !== undefined) category.descriptionEn = (description_en || descriptionEn || '').trim() || null;
-    if (description_hi !== undefined || descriptionHi !== undefined) category.descriptionHi = (description_hi || descriptionHi || '').trim() || null;
+    if (name) {
+      const trimmed = name.trim();
+      category.name = trimmed;
+      category.nameEn = (name_en || nameEn || trimmed).trim();
+      category.nameHi = (name_hi || nameHi || trimmed).trim();
+    } else {
+      if (name_en !== undefined || nameEn !== undefined) category.nameEn = (name_en || nameEn || '').trim() || null;
+      if (name_hi !== undefined || nameHi !== undefined) category.nameHi = (name_hi || nameHi || '').trim() || null;
+    }
+
+    if (description !== undefined) {
+      const d = description ? description.trim() : null;
+      category.description = d;
+      category.descriptionEn = (description_en !== undefined || descriptionEn !== undefined) ? (description_en || descriptionEn || '').trim() || null : d;
+      category.descriptionHi = (description_hi !== undefined || descriptionHi !== undefined) ? (description_hi || descriptionHi || '').trim() || null : d;
+    } else {
+      if (description_en !== undefined || descriptionEn !== undefined) category.descriptionEn = (description_en || descriptionEn || '').trim() || null;
+      if (description_hi !== undefined || descriptionHi !== undefined) category.descriptionHi = (description_hi || descriptionHi || '').trim() || null;
+    }
     if (isActive !== undefined) category.isActive = Boolean(isActive);
 
     await category.save();
