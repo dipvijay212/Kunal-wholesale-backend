@@ -7,10 +7,8 @@ const {
   sequelize,
   User,
   Category,
-  Collection,
   Product,
   ProductImage,
-  ProductCollection,
   Order,
   OrderItem,
 } = require('../models');
@@ -90,57 +88,6 @@ const categoriesData = [
   },
 ];
 
-const collectionsData = [
-  {
-    id: 1,
-    name: 'Banarasi Sarees',
-    slug: 'banarasi-sarees',
-    description: 'Our top Banarasi weaves — pure katan silk, real zari and jaal pallus, sourced directly from master weavers.',
-    image: unsplashUrl('1641699862936-be9f49b1c38d'),
-    isActive: true,
-  },
-  {
-    id: 2,
-    name: 'Silk Sarees',
-    slug: 'silk-sarees',
-    description: 'Structured silks for customers who buy once and keep for decades. Temple borders, korvai contrasts and handloom Tussar.',
-    image: unsplashUrl('1679006831648-7c9ea12e5807'),
-    isActive: true,
-  },
-  {
-    id: 3,
-    name: 'Georgette Sarees',
-    slug: 'georgette-sarees',
-    description: 'Fluid georgettes that move well and travel light. Easy to wear, easy to sell and priced for steady repeat orders.',
-    image: unsplashUrl('1617055407123-3d7130c1f940'),
-    isActive: true,
-  },
-  {
-    id: 4,
-    name: 'Cotton Sarees',
-    slug: 'cotton-sarees',
-    description: 'Breathable handloom cottons, Chanderi and Jamdani weaves for daily wear, boutique collections, and daytime wear.',
-    image: unsplashUrl('1774437561949-17b3bcf88db9'),
-    isActive: true,
-  },
-  {
-    id: 5,
-    name: 'Organza Sarees',
-    slug: 'organza-sarees',
-    description: 'Crisp, sheer organza in soft pastels with pearl, sequin and thread work. Light on the shoulder, strong on the shelf.',
-    image: unsplashUrl('1770199105820-2e12ecee91a1'),
-    isActive: true,
-  },
-  {
-    id: 6,
-    name: 'Bridal Collection',
-    slug: 'bridal-collection',
-    description: 'Statement bridal sarees in heavy zari and zardozi handwork, supplied in presentation boxes and available as single pieces.',
-    image: unsplashUrl('1570212773364-e30cd076539e'),
-    isActive: true,
-  },
-];
-
 const productsData = [
   {
     id: 1,
@@ -148,7 +95,6 @@ const productsData = [
     slug: 'aaranya-temple-border-kanjivaram-saree',
     productCode: 'KS-SLK-1001',
     categoryId: 1,
-    collectionId: 2,
     fabric: 'Kanjivaram Silk',
     color: 'Antique Ochre, Deep Wine, Peacock Teal',
     price: 7850,
@@ -167,7 +113,6 @@ const productsData = [
     slug: 'meenakshi-korvai-silk-saree',
     productCode: 'KS-SLK-1002',
     categoryId: 1,
-    collectionId: 2,
     fabric: 'Kanjivaram Silk',
     color: 'Peacock Teal, Maroon',
     price: 8450,
@@ -186,7 +131,6 @@ const productsData = [
     slug: 'sanjh-tussar-handloom-saree',
     productCode: 'KS-SLK-1003',
     categoryId: 1,
-    collectionId: 2,
     fabric: 'Tussar Silk',
     color: 'Mustard, Rust, Ivory',
     price: 3450,
@@ -205,7 +149,6 @@ const productsData = [
     slug: 'aarna-katan-banarasi-silk-saree',
     productCode: 'KS-BNS-1004',
     categoryId: 2,
-    collectionId: 1,
     fabric: 'Banarasi Silk',
     color: 'Deep Wine, Emerald, Midnight Navy, Sindoor Red',
     price: 4850,
@@ -224,7 +167,6 @@ const productsData = [
     slug: 'meher-tanchoi-banarasi-saree',
     productCode: 'KS-BNS-1005',
     categoryId: 2,
-    collectionId: 1,
     fabric: 'Banarasi Silk',
     color: 'Emerald, Plum, Midnight Navy',
     price: 5600,
@@ -243,7 +185,6 @@ const productsData = [
     slug: 'noor-silver-zari-banarasi-saree',
     productCode: 'KS-BNS-1006',
     categoryId: 2,
-    collectionId: 1,
     fabric: 'Banarasi Silk',
     color: 'Midnight Navy, Onyx Black, Silver Grey',
     price: 5250,
@@ -262,7 +203,6 @@ const productsData = [
     slug: 'rhea-sequin-georgette-saree',
     productCode: 'KS-GRG-1007',
     categoryId: 3,
-    collectionId: 3,
     fabric: 'Georgette',
     color: 'Onyx Black, Deep Wine, Midnight Navy, Silver Grey',
     price: 1850,
@@ -281,7 +221,6 @@ const productsData = [
     slug: 'kaia-mirror-work-georgette-saree',
     productCode: 'KS-GRG-1008',
     categoryId: 3,
-    collectionId: 3,
     fabric: 'Georgette',
     color: 'Rani Pink, Antique Ochre, Peacock Teal',
     price: 2100,
@@ -300,7 +239,6 @@ const productsData = [
     slug: 'mira-handloom-chanderi-cotton-silk-saree',
     productCode: 'KS-CTN-1009',
     categoryId: 4,
-    collectionId: 4,
     fabric: 'Chanderi Cotton Silk',
     color: 'Ivory, Blush, Antique Ochre, Sage',
     price: 1650,
@@ -319,7 +257,6 @@ const productsData = [
     slug: 'anandi-pastel-organza-embroidered-saree',
     productCode: 'KS-ORG-1010',
     categoryId: 5,
-    collectionId: 5,
     fabric: 'Organza',
     color: 'Blush, Sage, Lavender, Powder Blue',
     price: 2450,
@@ -338,7 +275,6 @@ const productsData = [
     slug: 'riddhi-heirloom-bridal-zardozi-silk-saree',
     productCode: 'KS-BRL-1011',
     categoryId: 10,
-    collectionId: 6,
     fabric: 'Banarasi Silk',
     color: 'Sindoor Red, Deep Wine, Maroon',
     price: 12500,
@@ -357,7 +293,6 @@ const productsData = [
     slug: 'tara-pure-tissue-silk-metallic-saree',
     productCode: 'KS-TSS-1012',
     categoryId: 1,
-    collectionId: 2,
     fabric: 'Tissue Silk',
     color: 'Champagne Gold, Silver Grey, Antique Ochre',
     price: 6200,
@@ -396,11 +331,7 @@ async function seedFullDatabase() {
     await Category.bulkCreate(categoriesData);
     console.log(`✅ Seeded ${categoriesData.length} saree categories.`);
 
-    // 3. Seed Collections
-    await Collection.bulkCreate(collectionsData);
-    console.log(`✅ Seeded ${collectionsData.length} saree collections.`);
-
-    // 4. Seed Products & Images & Junctions
+    // 3. Seed Products & Images
     for (const prod of productsData) {
       const createdProduct = await Product.create({
         id: prod.id,
@@ -429,14 +360,6 @@ async function seedFullDatabase() {
           displayOrder: idx + 1,
         }));
         await ProductImage.bulkCreate(imagesToCreate);
-      }
-
-      // Collection junction
-      if (prod.collectionId) {
-        await ProductCollection.create({
-          productId: createdProduct.id,
-          collectionId: prod.collectionId,
-        });
       }
     }
     console.log(`✅ Seeded ${productsData.length} wholesale saree products with high-res galleries.`);

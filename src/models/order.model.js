@@ -17,6 +17,15 @@ module.exports = (sequelize) => {
         },
         field: 'order_number',
       },
+      customerId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'customer_id',
+        references: {
+          model: 'customers',
+          key: 'id',
+        },
+      },
       customerName: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -58,24 +67,15 @@ module.exports = (sequelize) => {
       },
       city: {
         type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-          notEmpty: { msg: 'City is required' },
-        },
+        allowNull: true,
       },
       state: {
         type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-          notEmpty: { msg: 'State is required' },
-        },
+        allowNull: true,
       },
       pincode: {
         type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-          notEmpty: { msg: 'Pincode is required' },
-        },
+        allowNull: true,
       },
       notes: {
         type: DataTypes.TEXT,

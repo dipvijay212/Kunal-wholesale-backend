@@ -33,6 +33,18 @@ module.exports = (sequelize) => {
         field: 'product_name',
         comment: 'Historical snapshot of product name at order placement',
       },
+      productNameEn: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'product_name_en',
+        comment: 'Historical snapshot of product English name at order placement',
+      },
+      productNameHi: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'product_name_hi',
+        comment: 'Historical snapshot of product Hindi name at order placement',
+      },
       productCode: {
         type: DataTypes.STRING,
         allowNull: false,

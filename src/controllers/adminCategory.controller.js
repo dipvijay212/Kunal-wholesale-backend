@@ -8,9 +8,13 @@ const AppError = require('../utils/appError');
  */
 const createCategory = async (req, res, next) => {
   try {
-    const { name, slug, description, isActive } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive } = req.body;
 
-    if (!name || !slug) {
+    const finalNameHi = name_hi || nameHi || name;
+    const finalNameEn = name_en || nameEn || name;
+    const finalName = finalNameHi || finalNameEn;
+
+    if (!finalName || !slug) {
       throw new AppError('Category name and slug are required.', 400);
     }
 
@@ -23,9 +27,13 @@ const createCategory = async (req, res, next) => {
     }
 
     const category = await Category.create({
-      name: name.trim(),
+      name: finalName.trim(),
+      nameEn: finalNameEn ? finalNameEn.trim() : finalName.trim(),
+      nameHi: finalNameHi ? finalNameHi.trim() : finalName.trim(),
       slug: slug.trim().toLowerCase(),
-      description: description ? description.trim() : null,
+      description: description ? description.trim() : (description_hi || descriptionHi || description_en || descriptionEn || null),
+      descriptionEn: description_en || descriptionEn || (description ? description.trim() : null),
+      descriptionHi: description_hi || descriptionHi || (description ? description.trim() : null),
       isActive: isActive !== undefined ? Boolean(isActive) : true,
     });
 
@@ -42,7 +50,7 @@ const createCategory = async (req, res, next) => {
 const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, slug, description, isActive } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive } = req.body;
 
     const category = await Category.findByPk(id);
 
@@ -61,7 +69,11 @@ const updateCategory = async (req, res, next) => {
     }
 
     if (name) category.name = name.trim();
+    if (name_en !== undefined || nameEn !== undefined) category.nameEn = (name_en || nameEn || '').trim() || null;
+    if (name_hi !== undefined || nameHi !== undefined) category.nameHi = (name_hi || nameHi || '').trim() || null;
     if (description !== undefined) category.description = description ? description.trim() : null;
+    if (description_en !== undefined || descriptionEn !== undefined) category.descriptionEn = (description_en || descriptionEn || '').trim() || null;
+    if (description_hi !== undefined || descriptionHi !== undefined) category.descriptionHi = (description_hi || descriptionHi || '').trim() || null;
     if (isActive !== undefined) category.isActive = Boolean(isActive);
 
     await category.save();

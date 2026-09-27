@@ -16,6 +16,16 @@ module.exports = (sequelize) => {
           notEmpty: { msg: 'Category name is required' },
         },
       },
+      nameEn: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'name_en',
+      },
+      nameHi: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'name_hi',
+      },
       slug: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -29,6 +39,16 @@ module.exports = (sequelize) => {
       description: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      descriptionEn: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'description_en',
+      },
+      descriptionHi: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'description_hi',
       },
       isActive: {
         type: DataTypes.BOOLEAN,

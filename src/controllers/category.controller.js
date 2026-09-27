@@ -12,8 +12,12 @@ const getCategories = async (req, res, next) => {
       attributes: [
         'id',
         'name',
+        'nameEn',
+        'nameHi',
         'slug',
         'description',
+        'descriptionEn',
+        'descriptionHi',
         'createdAt',
         'updatedAt',
         [

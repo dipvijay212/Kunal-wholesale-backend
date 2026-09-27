@@ -47,6 +47,16 @@ module.exports = (sequelize) => {
         defaultValue: true,
         field: 'is_active',
       },
+      resetPasswordToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'reset_password_token',
+      },
+      resetPasswordExpires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'reset_password_expires',
+      },
     },
     {
       tableName: 'users',
@@ -74,10 +84,14 @@ module.exports = (sequelize) => {
     return await bcrypt.compare(candidatePassword, this.password);
   };
 
-  // Custom toJSON method to strip password field from responses
+  // Custom toJSON method to strip password and reset token fields from responses
   User.prototype.toJSON = function () {
     const values = { ...this.get() };
     delete values.password;
+    delete values.resetPasswordToken;
+    delete values.resetPasswordExpires;
+    delete values.reset_password_token;
+    delete values.reset_password_expires;
     return values;
   };
 

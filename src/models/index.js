@@ -2,23 +2,23 @@ const { sequelize } = require('../config/database');
 
 // Import model definitions
 const UserFactory = require('./user.model');
+const CustomerFactory = require('./customer.model');
 const CategoryFactory = require('./category.model');
-const CollectionFactory = require('./collection.model');
 const ProductFactory = require('./product.model');
 const ProductImageFactory = require('./productImage.model');
-const ProductCollectionFactory = require('./productCollection.model');
 const OrderFactory = require('./order.model');
 const OrderItemFactory = require('./orderItem.model');
+const WebsiteSettingFactory = require('./websiteSetting.model');
 
 // Initialize models
 const User = UserFactory(sequelize);
+const Customer = CustomerFactory(sequelize);
 const Category = CategoryFactory(sequelize);
-const Collection = CollectionFactory(sequelize);
 const Product = ProductFactory(sequelize);
 const ProductImage = ProductImageFactory(sequelize);
-const ProductCollection = ProductCollectionFactory(sequelize);
 const Order = OrderFactory(sequelize);
 const OrderItem = OrderItemFactory(sequelize);
+const WebsiteSetting = WebsiteSettingFactory(sequelize);
 
 // Set up Associations
 
@@ -44,18 +44,15 @@ ProductImage.belongsTo(Product, {
   as: 'product',
 });
 
-// 3. Product <-> Collection (Many-to-Many via ProductCollection)
-Product.belongsToMany(Collection, {
-  through: ProductCollection,
-  foreignKey: 'productId',
-  otherKey: 'collectionId',
-  as: 'collections',
+// 3. Customer <-> Order (One-to-Many)
+Customer.hasMany(Order, {
+  foreignKey: 'customerId',
+  as: 'orders',
+  onDelete: 'SET NULL',
 });
-Collection.belongsToMany(Product, {
-  through: ProductCollection,
-  foreignKey: 'collectionId',
-  otherKey: 'productId',
-  as: 'products',
+Order.belongsTo(Customer, {
+  foreignKey: 'customerId',
+  as: 'customer',
 });
 
 // 4. Order <-> OrderItem (One-to-Many)
@@ -83,13 +80,14 @@ OrderItem.belongsTo(Product, {
 const db = {
   sequelize,
   User,
+  Customer,
   Category,
-  Collection,
   Product,
   ProductImage,
-  ProductCollection,
   Order,
   OrderItem,
+  WebsiteSetting,
 };
 
 module.exports = db;
+

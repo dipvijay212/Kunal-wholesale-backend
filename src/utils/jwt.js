@@ -22,7 +22,21 @@ const verifyToken = (token) => {
   return jwt.verify(token, secret);
 };
 
+/**
+ * Generate JWT Token for customer payload
+ * Contains only minimal safe information { customerId }
+ * @param {Object} payload - { customerId }
+ * @returns {string} Signed JWT Token
+ */
+const generateCustomerToken = (payload) => {
+  const secret = process.env.JWT_SECRET || 'fallback_jwt_secret_key';
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+
+  return jwt.sign(payload, secret, { expiresIn });
+};
+
 module.exports = {
   generateToken,
+  generateCustomerToken,
   verifyToken,
 };

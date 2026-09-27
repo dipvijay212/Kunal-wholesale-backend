@@ -12,10 +12,11 @@ const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const isDev = process.env.NODE_ENV === 'development';
 
+const storagePath = process.env.DB_STORAGE || path.resolve(__dirname, '../../database.sqlite');
+
 let sequelize;
 
 if (dbDialect === 'sqlite') {
-  const storagePath = process.env.DB_STORAGE || path.resolve(__dirname, '../../database.sqlite');
   sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: storagePath,
@@ -62,7 +63,41 @@ const testConnection = async () => {
   }
 };
 
+const cliConfig = dbDialect === 'sqlite'
+  ? {
+      dialect: 'sqlite',
+      storage: storagePath,
+      logging: isDev ? (msg) => console.log(`[Sequelize SQLite] ${msg}`) : false,
+      define: {
+        timestamps: true,
+        underscored: true,
+      },
+    }
+  : {
+      username: dbUser,
+      password: dbPassword,
+      database: dbName,
+      host: dbHost,
+      port: dbPort,
+      dialect: 'mysql',
+      logging: isDev ? (msg) => console.log(`[Sequelize MySQL] ${msg}`) : false,
+      pool: {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+      define: {
+        timestamps: true,
+        underscored: true,
+      },
+    };
+
 module.exports = {
+  development: cliConfig,
+  test: cliConfig,
+  production: cliConfig,
   sequelize,
   testConnection,
 };
+

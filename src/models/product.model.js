@@ -16,6 +16,16 @@ module.exports = (sequelize) => {
           notEmpty: { msg: 'Product name is required' },
         },
       },
+      nameEn: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'name_en',
+      },
+      nameHi: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'name_hi',
+      },
       slug: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -41,10 +51,30 @@ module.exports = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      descriptionEn: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'description_en',
+      },
+      descriptionHi: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'description_hi',
+      },
       shortDescription: {
         type: DataTypes.TEXT,
         allowNull: true,
         field: 'short_description',
+      },
+      shortDescriptionEn: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'short_description_en',
+      },
+      shortDescriptionHi: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'short_description_hi',
       },
       categoryId: {
         type: DataTypes.INTEGER,
@@ -59,9 +89,29 @@ module.exports = (sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      fabricEn: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'fabric_en',
+      },
+      fabricHi: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'fabric_hi',
+      },
       color: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      colorEn: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'color_en',
+      },
+      colorHi: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field: 'color_hi',
       },
       price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -101,6 +151,11 @@ module.exports = (sequelize) => {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         field: 'is_new',
+      },
+      videoUrl: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'video_url',
       },
     },
     {

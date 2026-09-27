@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Product, Category, Collection, ProductImage } = require('../models');
+const { Product, Category, ProductImage } = require('../models');
 const { sendSuccess } = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
 const { getPagination, getSortOrder, getPaginationMeta } = require('../utils/queryHelpers');
@@ -13,7 +13,6 @@ const getProducts = async (req, res, next) => {
     const {
       search,
       category,
-      collection,
       fabric,
       color,
       minPrice,
@@ -33,25 +32,53 @@ const getProducts = async (req, res, next) => {
       whereClause.isAvailable = isAvailable === 'true' || isAvailable === '1';
     }
 
-    // Search term matching name, productCode, fabric, color
+    // Search term matching name (en/hi), description (en/hi), productCode, fabric (en/hi), color (en/hi)
     if (search && search.trim() !== '') {
       const searchTerm = `%${search.trim()}%`;
       whereClause[Op.or] = [
         { name: { [Op.like]: searchTerm } },
+        { nameEn: { [Op.like]: searchTerm } },
+        { nameHi: { [Op.like]: searchTerm } },
         { productCode: { [Op.like]: searchTerm } },
+        { description: { [Op.like]: searchTerm } },
+        { descriptionEn: { [Op.like]: searchTerm } },
+        { descriptionHi: { [Op.like]: searchTerm } },
+        { shortDescription: { [Op.like]: searchTerm } },
+        { shortDescriptionEn: { [Op.like]: searchTerm } },
+        { shortDescriptionHi: { [Op.like]: searchTerm } },
         { fabric: { [Op.like]: searchTerm } },
+        { fabricEn: { [Op.like]: searchTerm } },
+        { fabricHi: { [Op.like]: searchTerm } },
         { color: { [Op.like]: searchTerm } },
+        { colorEn: { [Op.like]: searchTerm } },
+        { colorHi: { [Op.like]: searchTerm } },
       ];
     }
 
-    // Fabric Filter
+    // Fabric Filter (supports either technical, english or hindi)
     if (fabric) {
-      whereClause.fabric = { [Op.like]: `%${fabric.trim()}%` };
+      const fabricTerm = `%${fabric.trim()}%`;
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { fabric: { [Op.like]: fabricTerm } },
+          { fabricEn: { [Op.like]: fabricTerm } },
+          { fabricHi: { [Op.like]: fabricTerm } },
+        ],
+      });
     }
 
-    // Color Filter
+    // Color Filter (supports either technical, english or hindi)
     if (color) {
-      whereClause.color = { [Op.like]: `%${color.trim()}%` };
+      const colorTerm = `%${color.trim()}%`;
+      whereClause[Op.and] = whereClause[Op.and] || [];
+      whereClause[Op.and].push({
+        [Op.or]: [
+          { color: { [Op.like]: colorTerm } },
+          { colorEn: { [Op.like]: colorTerm } },
+          { colorHi: { [Op.like]: colorTerm } },
+        ],
+      });
     }
 
     // Price Range Filter
@@ -70,7 +97,7 @@ const getProducts = async (req, res, next) => {
       {
         model: Category,
         as: 'category',
-        attributes: ['id', 'name', 'slug'],
+        attributes: ['id', 'name', 'nameEn', 'nameHi', 'slug', 'description', 'descriptionEn', 'descriptionHi'],
         required: false,
       },
       {
@@ -79,13 +106,6 @@ const getProducts = async (req, res, next) => {
         attributes: ['id', 'imageUrl', 'altText', 'displayOrder'],
         separate: true,
         order: [['displayOrder', 'ASC']],
-      },
-      {
-        model: Collection,
-        as: 'collections',
-        attributes: ['id', 'name', 'slug'],
-        through: { attributes: [] },
-        required: false,
       },
     ];
 
@@ -99,16 +119,6 @@ const getProducts = async (req, res, next) => {
       includeClause[0].required = true;
     }
 
-    // Collection Filter (by ID or Slug)
-    if (collection) {
-      const collectionWhere = isNaN(collection)
-        ? { slug: collection.trim() }
-        : { id: parseInt(collection, 10) };
-
-      includeClause[2].where = collectionWhere;
-      includeClause[2].required = true;
-    }
-
     // Query Products with findAndCountAll
     const { count, rows: products } = await Product.findAndCountAll({
       where: whereClause,
@@ -116,7 +126,7 @@ const getProducts = async (req, res, next) => {
       order,
       limit,
       offset,
-      distinct: true, // Prevents duplicate counts due to includes
+      distinct: true,
     });
 
     const pagination = getPaginationMeta(count, page, limit);
@@ -144,19 +154,13 @@ const getProductBySlug = async (req, res, next) => {
         {
           model: Category,
           as: 'category',
-          attributes: ['id', 'name', 'slug', 'description'],
+          attributes: ['id', 'name', 'nameEn', 'nameHi', 'slug', 'description', 'descriptionEn', 'descriptionHi'],
         },
         {
           model: ProductImage,
           as: 'images',
           attributes: ['id', 'imageUrl', 'altText', 'displayOrder'],
           order: [['displayOrder', 'ASC']],
-        },
-        {
-          model: Collection,
-          as: 'collections',
-          attributes: ['id', 'name', 'slug', 'description', 'image'],
-          through: { attributes: [] },
         },
       ],
     });
