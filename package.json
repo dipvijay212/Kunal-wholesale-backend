@@ -36,6 +36,8 @@
     "multer": "^2.4.0",
     "mysql2": "^3.9.7",
     "nodemailer": "^10.0.10",
+    "pg": "^8.23.0",
+    "pg-hstore": "^2.3.4",
     "resend": "^6.30.0",
     "sequelize": "^6.37.3",
     "sqlite3": "^6.0.1"

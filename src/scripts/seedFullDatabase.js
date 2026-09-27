@@ -6,11 +6,13 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const {
   sequelize,
   User,
+  Customer,
   Category,
   Product,
   ProductImage,
   Order,
   OrderItem,
+  WebsiteSetting,
 } = require('../models');
 
 const unsplashUrl = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=85`;
@@ -364,9 +366,80 @@ async function seedFullDatabase() {
     }
     console.log(`✅ Seeded ${productsData.length} wholesale saree products with high-res galleries.`);
 
+    // 4. Seed Wholesale Registered Customers
+    const seededCustomers = await Customer.bulkCreate([
+      {
+        name: 'Dipvijay Patel',
+        businessName: 'Surat Silk Hub',
+        phone: '9876543292',
+        whatsappNumber: '919876543292',
+        email: 'dipvijay@suratsilk.in',
+        password: 'Password@123',
+        address: 'Plot 24, Ring Road Textile Market',
+        city: 'Surat',
+        state: 'Gujarat',
+        pincode: '395002',
+        isActive: true,
+      },
+      {
+        name: 'Priya Mehta',
+        businessName: 'Aanchal Boutique',
+        phone: '9825011223',
+        whatsappNumber: '919825011223',
+        email: 'priya@aanchalboutique.in',
+        password: 'Password@123',
+        address: 'Shop 12, Heritage Square, CG Road',
+        city: 'Ahmedabad',
+        state: 'Gujarat',
+        pincode: '380009',
+        isActive: true,
+      },
+      {
+        name: 'Rakesh Agarwal',
+        businessName: 'Shree Saree Sadan',
+        phone: '9427055810',
+        whatsappNumber: '919427055810',
+        email: 'shreesareesadan@gmail.com',
+        password: 'Password@123',
+        address: '44 MT Cloth Market',
+        city: 'Indore',
+        state: 'Madhya Pradesh',
+        pincode: '452002',
+        isActive: true,
+      },
+      {
+        name: 'Anand Textiles',
+        businessName: 'Anand Boutique',
+        phone: '9876599483',
+        whatsappNumber: '919876599483',
+        email: 'anand@textiles.in',
+        password: 'Password@123',
+        address: 'Gowdowlia Chowk',
+        city: 'Varanasi',
+        state: 'Uttar Pradesh',
+        pincode: '221001',
+        isActive: true,
+      },
+      {
+        name: 'Sonal Sharma',
+        businessName: 'Jaipur Bandhani House',
+        phone: '9913238496',
+        whatsappNumber: '919913238496',
+        email: 'sonal@jaipurhouse.in',
+        password: 'Password@123',
+        address: '15 Johari Bazar',
+        city: 'Jaipur',
+        state: 'Rajasthan',
+        pincode: '302003',
+        isActive: true,
+      },
+    ]);
+    console.log(`✅ Seeded ${seededCustomers.length} registered wholesale customers in database.`);
+
     // 5. Seed sample orders
-    const sampleOrder = await Order.create({
+    const sampleOrder1 = await Order.create({
       orderNumber: 'KS-20260923-0001',
+      customerId: seededCustomers[1].id,
       customerName: 'Priya Mehta',
       businessName: 'Aanchal Boutique',
       phone: '9825011223',
@@ -385,7 +458,7 @@ async function seedFullDatabase() {
 
     await OrderItem.bulkCreate([
       {
-        orderId: sampleOrder.id,
+        orderId: sampleOrder1.id,
         productId: 1,
         productName: 'Aaranya Temple Border Kanjivaram Saree',
         productCode: 'KS-SLK-1001',
@@ -394,7 +467,7 @@ async function seedFullDatabase() {
         subtotal: 15700.0,
       },
       {
-        orderId: sampleOrder.id,
+        orderId: sampleOrder1.id,
         productId: 4,
         productName: 'Aarna Katan Banarasi Silk Saree',
         productCode: 'KS-BNS-1004',
@@ -403,7 +476,7 @@ async function seedFullDatabase() {
         subtotal: 9700.0,
       },
       {
-        orderId: sampleOrder.id,
+        orderId: sampleOrder1.id,
         productId: 7,
         productName: 'Rhea Sequin Georgette Saree',
         productCode: 'KS-GRG-1007',
@@ -415,6 +488,7 @@ async function seedFullDatabase() {
 
     const sampleOrder2 = await Order.create({
       orderNumber: 'KS-20260923-0002',
+      customerId: seededCustomers[2].id,
       customerName: 'Rakesh Agarwal',
       businessName: 'Shree Saree Sadan',
       phone: '9427055810',
@@ -439,6 +513,64 @@ async function seedFullDatabase() {
       unitPrice: 2200.0,
       quantity: 12,
       subtotal: 26400.0,
+    });
+
+    const sampleOrder3 = await Order.create({
+      orderNumber: 'KS-20260926-0003',
+      customerId: seededCustomers[0].id,
+      customerName: 'Dipvijay Patel',
+      businessName: 'Surat Silk Hub',
+      phone: '9876543292',
+      whatsappNumber: '919876543292',
+      email: 'dipvijay@suratsilk.in',
+      address: 'Plot 24, Ring Road Textile Market',
+      city: 'Surat',
+      state: 'Gujarat',
+      pincode: '395002',
+      notes: 'Please dispatch via express cargo.',
+      totalItems: 10,
+      subtotal: 45000.0,
+      totalAmount: 45000.0,
+      status: 'processing',
+    });
+
+    await OrderItem.create({
+      orderId: sampleOrder3.id,
+      productId: 2,
+      productName: 'Meenakshi Korvai Silk Saree',
+      productCode: 'KS-SLK-1002',
+      unitPrice: 4500.0,
+      quantity: 10,
+      subtotal: 45000.0,
+    });
+
+    const sampleOrder4 = await Order.create({
+      orderNumber: 'KS-20260926-0004',
+      customerId: seededCustomers[4].id,
+      customerName: 'Sonal Sharma',
+      businessName: 'Jaipur Bandhani House',
+      phone: '9913238496',
+      whatsappNumber: '919913238496',
+      email: 'sonal@jaipurhouse.in',
+      address: '15 Johari Bazar',
+      city: 'Jaipur',
+      state: 'Rajasthan',
+      pincode: '302003',
+      notes: 'Sample order for wedding exhibition.',
+      totalItems: 6,
+      subtotal: 21000.0,
+      totalAmount: 21000.0,
+      status: 'packed',
+    });
+
+    await OrderItem.create({
+      orderId: sampleOrder4.id,
+      productId: 5,
+      productName: 'Meher Tanchoi Banarasi Saree',
+      productCode: 'KS-BNS-1005',
+      unitPrice: 3500.0,
+      quantity: 6,
+      subtotal: 21000.0,
     });
 
     console.log('✅ Seeded initial wholesale customer orders.');

@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // 1. Verify MySQL database connection
-    console.log('[Server] Initializing MySQL Database Connection...');
+    // 1. Verify database connection
+    console.log('[Server] Initializing Database Connection...');
     await testConnection();
 
     // 2. Start HTTP Express Server
@@ -38,7 +38,7 @@ const startServer = async () => {
 
   } catch (error) {
     console.error('❌ [Server Fatal Error] Failed to start backend server due to database connection failure.');
-    console.error('   Please ensure MySQL service is running and credentials in .env are correct.');
+    console.error('   Please ensure database service is reachable and credentials in .env are correct.');
     console.error(`   Error Details: ${error.message}`);
     process.exit(1);
   }

@@ -23,6 +23,11 @@ const {
 } = require('../controllers/adminOrder.controller');
 
 const {
+  getAdminCustomers,
+  getAdminCustomerById,
+} = require('../controllers/adminCustomer.controller');
+
+const {
   getAdminLanguageSettings,
   updateAdminLanguageSettings,
 } = require('../controllers/setting.controller');
@@ -65,6 +70,10 @@ router.delete('/categories/:id', deleteCategory);
 router.get('/orders', getAdminOrders);
 router.get('/orders/:id', getAdminOrderById);
 router.patch('/orders/:id/status', updateOrderStatus);
+
+// --- Customer Admin APIs ---
+router.get('/customers', getAdminCustomers);
+router.get('/customers/:id', getAdminCustomerById);
 
 // --- Settings Admin APIs ---
 router.get('/settings/language', getAdminLanguageSettings);
