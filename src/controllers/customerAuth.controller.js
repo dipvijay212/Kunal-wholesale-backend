@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { Customer } = require('../models');
+const { Customer, User, sequelize } = require('../models');
 const { generateCustomerToken } = require('../utils/jwt');
 const { sendSuccess } = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
@@ -19,51 +19,173 @@ function normalizePhone(rawPhone) {
 }
 
 /**
+ * Resolves frontend base URL dynamically from request headers or environment variables
+ */
+const getFrontendBaseUrl = (req) => {
+  const origin = req.get('origin') || req.get('referer');
+  if (origin) {
+    try {
+      const url = new URL(origin);
+      return `${url.protocol}//${url.host}`;
+    } catch (e) {
+      // fallback
+    }
+  }
+  const configured = (process.env.FRONTEND_URL || '').trim();
+  const urls = configured.split(',').map((u) => u.trim()).filter(Boolean);
+  if (process.env.NODE_ENV === 'development') {
+    const local = urls.find((u) => u.includes('localhost') || u.includes('127.0.0.1'));
+    if (local) return local;
+  }
+  return urls[0] || 'http://localhost:3000';
+};
+
+/**
+ * Masks an email for privacy while giving clear user confirmation (e.g. 77****y@gmail.com)
+ */
+const maskEmail = (email) => {
+  if (!email || !email.includes('@')) return email;
+  const [local, domain] = email.split('@');
+  if (local.length <= 2) return `${local[0]}*@${domain}`;
+  const first = local.slice(0, 2);
+  const last = local.slice(-1);
+  return `${first}${'*'.repeat(Math.min(local.length - 3, 4))}${last}@${domain}`;
+};
+
+/**
  * POST /api/customer/auth/forgot-password
  * Initiates password reset by sending an email with a secure token via Resend
  */
 const forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { email, identifier } = req.body;
+    const input = (email || identifier || '').trim();
 
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      throw new AppError('Please provide a valid email address.', 400);
+    if (!input) {
+      throw new AppError('Please provide your registered email address or mobile number.', 400);
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const customer = await Customer.findOne({
-      where: { email: cleanEmail },
-    });
+    let customer = null;
+    let adminUser = null;
 
-    // Always respond with success to prevent account enumeration
-    if (!customer || !customer.isActive) {
+    // Check if input is a 10-digit mobile number
+    const digits = normalizePhone(input);
+    const isPhone = digits.length === 10 && !input.includes('@');
+
+    if (isPhone) {
+      customer = await Customer.findOne({
+        where: { phone: digits },
+      });
+
+      if (!customer) {
+        console.warn(`⚠️ [Forgot Password] No customer found for mobile number: ${digits}`);
+        throw new AppError(
+          'No registered account found with this mobile number. Please check and try again.',
+          404
+        );
+      }
+
+      if (!customer.email) {
+        console.warn(`⚠️ [Forgot Password] Customer with phone ${digits} has no registered email.`);
+        throw new AppError(
+          'No email address is linked to this mobile account. Please contact Kunal Sarees support for assistance.',
+          400
+        );
+      }
+    } else {
+      const cleanEmail = input.toLowerCase();
+
+      // Case-insensitive lookup for customer email
+      customer = await Customer.findOne({
+        where: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('email')),
+          cleanEmail
+        ),
+      });
+
+      // If no customer record found, check if it's an Admin/Staff account
+      if (!customer) {
+        adminUser = await User.findOne({
+          where: sequelize.where(
+            sequelize.fn('LOWER', sequelize.col('email')),
+            cleanEmail
+          ),
+        });
+
+        // Also check if user typed legacy admin alias
+        if (!adminUser && (cleanEmail === 'admin@kunalsarees.com' || cleanEmail === 'admin@kunalsarees.in')) {
+          adminUser = await User.findOne({ where: { role: 'admin' } });
+        }
+      }
+    }
+
+    // If neither customer nor admin account exists
+    if (!customer && !adminUser) {
+      console.warn(`⚠️ [Forgot Password] No customer or admin account found with email/identifier: ${input}`);
+      throw new AppError(
+        'No registered account found with this email address or mobile number. Please check and try again.',
+        404
+      );
+    }
+
+    const frontendBaseUrl = getFrontendBaseUrl(req);
+
+    // If it's an Admin user account
+    if (adminUser) {
+      if (!adminUser.isActive) {
+        throw new AppError('This admin account is deactivated. Please contact the administrator.', 403);
+      }
+
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+      adminUser.resetPasswordToken = hashedToken;
+      adminUser.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
+      await adminUser.save();
+
+      const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}&type=admin`;
+
+      try {
+        console.log(`🔑 [Forgot Password] Sending admin reset email to ${adminUser.email}...`);
+        await sendPasswordResetEmail({
+          to: adminUser.email,
+          name: adminUser.name,
+          resetUrl,
+          userType: 'admin',
+        });
+      } catch (emailError) {
+        adminUser.resetPasswordToken = null;
+        adminUser.resetPasswordExpires = null;
+        await adminUser.save();
+        console.error(`❌ [Forgot Password Error]: Failed to send admin reset email:`, emailError.message);
+        throw new AppError('Unable to send password reset email at this moment. Please try again later.', 500);
+      }
+
+      const masked = maskEmail(adminUser.email);
       return sendSuccess(
         res,
-        'If an active account exists with this email, a password reset link has been sent.',
-        null,
+        `Password reset instructions have been sent to ${masked}.`,
+        { email: adminUser.email, maskedEmail: masked },
         200
       );
     }
 
-    // 1. Generate random 32-byte reset token
-    const rawToken = crypto.randomBytes(32).toString('hex');
+    // Customer account
+    if (!customer.isActive) {
+      throw new AppError('This customer account is deactivated. Please contact Kunal Sarees support.', 403);
+    }
 
-    // 2. Hash token for secure DB storage (SHA-256)
+    const rawToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    // 3. Set token and 30-minute expiration
     customer.resetPasswordToken = hashedToken;
     customer.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
     await customer.save();
 
-    // 4. Construct reset link
-    const frontendBaseUrl = process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',')[0].trim()
-      : 'http://localhost:3000';
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}`;
 
-    // 5. Send email via Resend
     try {
+      console.log(`🔑 [Forgot Password] Sending customer reset email to ${customer.email}...`);
       await sendPasswordResetEmail({
         to: customer.email,
         name: customer.name,
@@ -71,17 +193,18 @@ const forgotPassword = async (req, res, next) => {
         userType: 'customer',
       });
     } catch (emailError) {
-      // Revert token if email fails
       customer.resetPasswordToken = null;
       customer.resetPasswordExpires = null;
       await customer.save();
+      console.error(`❌ [Forgot Password Error]: Failed to send customer reset email:`, emailError.message);
       throw new AppError('Unable to send password reset email at this moment. Please try again later.', 500);
     }
 
+    const masked = maskEmail(customer.email);
     return sendSuccess(
       res,
-      'If an active account exists with this email, a password reset link has been sent.',
-      null,
+      `Password reset instructions have been sent to ${masked}.`,
+      { email: customer.email, maskedEmail: masked },
       200
     );
   } catch (error) {
@@ -112,13 +235,28 @@ const verifyResetToken = async (req, res, next) => {
       },
     });
 
+    let email = customer ? customer.email : null;
+
     if (!customer) {
-      throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+      // Check Admin User fallback
+      const admin = await User.findOne({
+        where: {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: {
+            [Op.gt]: new Date(),
+          },
+        },
+      });
+      if (admin) {
+        email = admin.email;
+      } else {
+        throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+      }
     }
 
     return sendSuccess(res, 'Token is valid', {
       valid: true,
-      email: customer.email,
+      email,
     });
   } catch (error) {
     next(error);
@@ -156,17 +294,32 @@ const resetPassword = async (req, res, next) => {
       },
     });
 
-    if (!customer) {
-      throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+    if (customer) {
+      customer.password = password;
+      customer.resetPasswordToken = null;
+      customer.resetPasswordExpires = null;
+      await customer.save();
+      return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
     }
 
-    // Set new password (Sequelize hook will hash with bcrypt)
-    customer.password = password;
-    customer.resetPasswordToken = null;
-    customer.resetPasswordExpires = null;
-    await customer.save();
+    const admin = await User.findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: {
+          [Op.gt]: new Date(),
+        },
+      },
+    });
 
-    return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
+    if (admin) {
+      admin.password = password;
+      admin.resetPasswordToken = null;
+      admin.resetPasswordExpires = null;
+      await admin.save();
+      return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
+    }
+
+    throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
   } catch (error) {
     next(error);
   }

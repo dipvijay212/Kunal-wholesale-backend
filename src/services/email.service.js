@@ -245,11 +245,40 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl, userType = 'customer
   const html = getPasswordResetHtml({ name, resetUrl, userType });
   const text = `Namaste ${name || 'User'},\n\nWe received a request to reset your password on Kunal Sarees.\n\nPlease use the following link to reset your password (valid for 30 minutes):\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.\n\nKunal Sarees Wholesale`;
 
-  // 1. Try Gmail SMTP if configured
+  let lastError = null;
+
+  // 1. Try Resend API FIRST (primary transactional provider with verified domain kunalsarees.in)
+  const resend = getResendClient();
+  if (resend) {
+    try {
+      console.log(`📤 [Email Service] Sending password reset email via Resend to ${to} from ${fromEmail}...`);
+      const { data, error } = await resend.emails.send({
+        from: fromEmail,
+        to,
+        subject,
+        html,
+        text,
+      });
+
+      if (error) {
+        console.warn(`⚠️ [Resend Error]: ${error.message} (code: ${error.name || error.statusCode})`);
+        lastError = new Error(error.message || 'Resend API failed to send email');
+      } else {
+        console.log(`✅ [Resend Email Sent] Password reset email sent to ${to} (Message ID: ${data?.id})`);
+        return { success: true, provider: 'resend', data };
+      }
+    } catch (err) {
+      console.warn(`⚠️ [Resend Exception]: ${err.message}. Falling back to SMTP...`);
+      lastError = err;
+    }
+  }
+
+  // 2. Fallback to Gmail SMTP if Resend is unavailable or encountered an error
   const smtp = getSmtpTransporter();
   if (smtp) {
     try {
       const sender = process.env.SMTP_USER || process.env.EMAIL_USER;
+      console.log(`📤 [Email Service] Attempting fallback via Gmail SMTP to ${to}...`);
       const info = await smtp.sendMail({
         from: `Kunal Sarees <${sender}>`,
         to,
@@ -257,66 +286,36 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl, userType = 'customer
         html,
         text,
       });
-      console.log(`✅ [SMTP Email Sent] Email sent to ${to} (ID: ${info.messageId})`);
-      return { success: true, data: info };
+      console.log(`✅ [SMTP Email Sent] Email sent to ${to} (Message ID: ${info.messageId})`);
+      return { success: true, provider: 'smtp', data: info };
     } catch (smtpErr) {
-      console.warn(`⚠️ [SMTP Error]: ${smtpErr.message}. Falling back to Resend...`);
+      console.error(`❌ [SMTP Error]: ${smtpErr.message}`);
+      lastError = smtpErr;
     }
   }
 
-  // 2. Try Resend API
-  const resend = getResendClient();
-
-  if (!resend) {
-    console.log(`\n================================================================`);
-    console.log(`📧 [EMAIL SERVICE - DEV LOG] Resend API key not configured.`);
-    console.log(`   To:        ${to}`);
-    console.log(`   Subject:   ${subject}`);
-    console.log(`   Reset URL: ${resetUrl}`);
-    console.log(`================================================================\n`);
-    return { success: true, mocked: true };
-  }
-
-  try {
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to,
-      subject,
-      html,
-      text,
-    });
-
-    if (error) {
-      console.warn(`\n================================================================`);
-      console.warn(`⚠️ [Resend Notice]: ${error.message}`);
-      console.warn(`   Recipient: ${to}`);
-      console.warn(`   Reset URL: ${resetUrl}`);
-      console.warn(`================================================================\n`);
-
-      // In development, return mock success so UI doesn't crash
-      if (process.env.NODE_ENV === 'development' || error.statusCode === 403) {
-        return { success: true, mocked: true, reason: error.message };
-      }
-
-      throw new Error(error.message || 'Failed to send email via Resend');
-    }
-
-    console.log(`✅ [Email Sent] Reset password email sent to ${to} (Message ID: ${data?.id})`);
-    return { success: true, data };
-  } catch (error) {
+  // If both providers failed or were not configured
+  if (lastError) {
+    console.error(`❌ [Email Service Error]: Failed to send password reset email to ${to}: ${lastError.message}`);
     if (process.env.NODE_ENV === 'development') {
       console.log(`\n================================================================`);
-      console.log(`📧 [DEV FALLBACK - RESET LINK GENERATED]`);
+      console.log(`📧 [DEV FALLBACK - RESET LINK AVAILABLE IN CONSOLE]`);
       console.log(`   Recipient: ${to}`);
       console.log(`   Reset URL: ${resetUrl}`);
-      console.log(`   Error:     ${error.message}`);
+      console.log(`   Error:     ${lastError.message}`);
       console.log(`================================================================\n`);
-      return { success: true, mocked: true, reason: error.message };
     }
-
-    console.error('❌ [Resend Email Service Exception]:', error.message);
-    throw error;
+    throw lastError;
   }
+
+  // Neither Resend nor SMTP is configured
+  console.log(`\n================================================================`);
+  console.log(`📧 [EMAIL SERVICE - DEV LOG] Neither Resend nor SMTP configured.`);
+  console.log(`   To:        ${to}`);
+  console.log(`   Subject:   ${subject}`);
+  console.log(`   Reset URL: ${resetUrl}`);
+  console.log(`================================================================\n`);
+  return { success: true, mocked: true };
 };
 
 module.exports = {

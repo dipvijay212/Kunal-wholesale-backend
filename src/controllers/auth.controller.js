@@ -1,10 +1,32 @@
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { User } = require('../models');
+const { User, Customer, sequelize } = require('../models');
 const { sendSuccess } = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
 const { generateToken } = require('../utils/jwt');
 const { sendPasswordResetEmail } = require('../services/email.service');
+
+/**
+ * Resolves frontend base URL dynamically from request headers or environment variables
+ */
+const getFrontendBaseUrl = (req) => {
+  const origin = req.get('origin') || req.get('referer');
+  if (origin) {
+    try {
+      const url = new URL(origin);
+      return `${url.protocol}//${url.host}`;
+    } catch (e) {
+      // fallback
+    }
+  }
+  const configured = (process.env.FRONTEND_URL || '').trim();
+  const urls = configured.split(',').map((u) => u.trim()).filter(Boolean);
+  if (process.env.NODE_ENV === 'development') {
+    const local = urls.find((u) => u.includes('localhost') || u.includes('127.0.0.1'));
+    if (local) return local;
+  }
+  return urls[0] || 'http://localhost:3000';
+};
 
 /**
  * POST /api/auth/login
@@ -61,6 +83,18 @@ const login = async (req, res, next) => {
 };
 
 /**
+ * Masks an email for privacy while giving clear user confirmation (e.g. 77****y@gmail.com)
+ */
+const maskEmail = (email) => {
+  if (!email || !email.includes('@')) return email;
+  const [local, domain] = email.split('@');
+  if (local.length <= 2) return `${local[0]}*@${domain}`;
+  const first = local.slice(0, 2);
+  const last = local.slice(-1);
+  return `${first}${'*'.repeat(Math.min(local.length - 3, 4))}${last}@${domain}`;
+};
+
+/**
  * POST /api/auth/forgot-password
  * Initiates admin password reset by sending an email via Resend
  */
@@ -73,39 +107,97 @@ const forgotPassword = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const user = await User.findOne({
-      where: { email: cleanEmail },
+
+    // 1. Search Admin User
+    let user = await User.findOne({
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('email')),
+        cleanEmail
+      ),
     });
 
-    // Always respond with success to prevent account enumeration
-    if (!user || !user.isActive) {
+    if (!user && (cleanEmail === 'admin@kunalsarees.com' || cleanEmail === 'admin@kunalsarees.in')) {
+      user = await User.findOne({ where: { role: 'admin' } });
+    }
+
+    let customer = null;
+    // 2. If not found in User, check Customer
+    if (!user) {
+      customer = await Customer.findOne({
+        where: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('email')),
+          cleanEmail
+        ),
+      });
+    }
+
+    if (!user && !customer) {
+      console.warn(`⚠️ [Forgot Password Admin Endpoint] No user or customer found for email: ${cleanEmail}`);
+      throw new AppError(
+        'No registered account found with this email address. Please check and try again.',
+        404
+      );
+    }
+
+    const frontendBaseUrl = getFrontendBaseUrl(req);
+
+    // If customer account was found
+    if (customer) {
+      if (!customer.isActive) {
+        throw new AppError('This customer account is deactivated. Please contact Kunal Sarees support.', 403);
+      }
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+      customer.resetPasswordToken = hashedToken;
+      customer.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
+      await customer.save();
+
+      const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}`;
+      try {
+        console.log(`🔑 [Forgot Password] Sending customer reset email to ${customer.email}...`);
+        await sendPasswordResetEmail({
+          to: customer.email,
+          name: customer.name,
+          resetUrl,
+          userType: 'customer',
+        });
+      } catch (emailError) {
+        customer.resetPasswordToken = null;
+        customer.resetPasswordExpires = null;
+        await customer.save();
+        console.error(`❌ [Forgot Password Error]: Failed to send customer reset email:`, emailError.message);
+        throw new AppError('Unable to send password reset email at this moment. Please try again later.', 500);
+      }
+
+      const masked = maskEmail(customer.email);
       return sendSuccess(
         res,
-        'If an active admin account exists with this email, a password reset link has been sent.',
-        null,
+        `Password reset instructions have been sent to ${masked}.`,
+        { email: customer.email, maskedEmail: masked },
         200
       );
     }
 
+    // Admin user account
+    if (!user.isActive) {
+      throw new AppError('This admin account is deactivated. Please contact the administrator.', 403);
+    }
+
     // 1. Generate random 32-byte reset token
     const rawToken = crypto.randomBytes(32).toString('hex');
-
-    // 2. Hash token for secure DB storage (SHA-256)
     const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-    // 3. Set token and 30-minute expiration
+    // 2. Set token and 30-minute expiration
     user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000);
     await user.save();
 
-    // 4. Construct reset link
-    const frontendBaseUrl = process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',')[0].trim()
-      : 'http://localhost:3000';
+    // 3. Construct reset link
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${rawToken}&type=admin`;
 
-    // 5. Send email via Resend
+    // 4. Send email via Resend
     try {
+      console.log(`🔑 [Forgot Password] Sending admin reset email to ${user.email}...`);
       await sendPasswordResetEmail({
         to: user.email,
         name: user.name,
@@ -116,13 +208,15 @@ const forgotPassword = async (req, res, next) => {
       user.resetPasswordToken = null;
       user.resetPasswordExpires = null;
       await user.save();
+      console.error(`❌ [Forgot Password Error]: Failed to send admin reset email:`, emailError.message);
       throw new AppError('Unable to send password reset email at this moment. Please try again later.', 500);
     }
 
+    const masked = maskEmail(user.email);
     return sendSuccess(
       res,
-      'If an active admin account exists with this email, a password reset link has been sent.',
-      null,
+      `Password reset instructions have been sent to ${masked}.`,
+      { email: user.email, maskedEmail: masked },
       200
     );
   } catch (error) {
@@ -153,13 +247,27 @@ const verifyResetToken = async (req, res, next) => {
       },
     });
 
+    let email = user ? user.email : null;
+
     if (!user) {
-      throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+      const customer = await Customer.findOne({
+        where: {
+          resetPasswordToken: hashedToken,
+          resetPasswordExpires: {
+            [Op.gt]: new Date(),
+          },
+        },
+      });
+      if (customer) {
+        email = customer.email;
+      } else {
+        throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+      }
     }
 
     return sendSuccess(res, 'Token is valid', {
       valid: true,
-      email: user.email,
+      email,
     });
   } catch (error) {
     next(error);
@@ -197,16 +305,32 @@ const resetPassword = async (req, res, next) => {
       },
     });
 
-    if (!user) {
-      throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
+    if (user) {
+      user.password = password;
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
+      return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
     }
 
-    user.password = password;
-    user.resetPasswordToken = null;
-    user.resetPasswordExpires = null;
-    await user.save();
+    const customer = await Customer.findOne({
+      where: {
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: {
+          [Op.gt]: new Date(),
+        },
+      },
+    });
 
-    return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
+    if (customer) {
+      customer.password = password;
+      customer.resetPasswordToken = null;
+      customer.resetPasswordExpires = null;
+      await customer.save();
+      return sendSuccess(res, 'Password has been reset successfully. You can now log in with your new password.', null, 200);
+    }
+
+    throw new AppError('Password reset link is invalid or has expired. Please request a new one.', 400);
   } catch (error) {
     next(error);
   }
