@@ -19,7 +19,7 @@ module.exports = (sequelize) => {
         },
       },
       imageUrl: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false,
         field: 'image_url',
         validate: {

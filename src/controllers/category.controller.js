@@ -18,6 +18,7 @@ const getCategories = async (req, res, next) => {
         'description',
         'descriptionEn',
         'descriptionHi',
+        'imageUrl',
         'createdAt',
         'updatedAt',
         [
@@ -38,8 +39,39 @@ const getCategories = async (req, res, next) => {
       order: [['name', 'ASC']],
     });
 
+    const ProductImage = sequelize.models.ProductImage;
+    const categoriesWithImages = await Promise.all(
+      categories.map(async (cat) => {
+        const catJson = cat.toJSON();
+        if (!catJson.imageUrl) {
+          const productWithImage = await Product.findOne({
+            where: { categoryId: cat.id, isAvailable: true },
+            include: [
+              {
+                model: ProductImage,
+                as: 'images',
+                attributes: ['imageUrl', 'displayOrder'],
+              },
+            ],
+            order: [
+              ['id', 'DESC'],
+              [{ model: ProductImage, as: 'images' }, 'displayOrder', 'ASC'],
+            ],
+          });
+          if (
+            productWithImage &&
+            productWithImage.images &&
+            productWithImage.images.length > 0
+          ) {
+            catJson.imageUrl = productWithImage.images[0].imageUrl;
+          }
+        }
+        return catJson;
+      })
+    );
+
     return sendSuccess(res, 'Categories fetched successfully', {
-      categories,
+      categories: categoriesWithImages,
     });
   } catch (error) {
     next(error);

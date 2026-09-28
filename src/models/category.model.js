@@ -55,6 +55,11 @@ module.exports = (sequelize) => {
         defaultValue: true,
         field: 'is_active',
       },
+      imageUrl: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'image_url',
+      },
     },
     {
       tableName: 'categories',

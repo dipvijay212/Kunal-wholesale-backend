@@ -8,7 +8,8 @@ const AppError = require('../utils/appError');
  */
 const createCategory = async (req, res, next) => {
   try {
-    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image } = req.body;
+    const finalImageUrl = imageUrl || image_url || image || null;
 
     const finalNameHi = name_hi || nameHi || name;
     const finalNameEn = name_en || nameEn || name;
@@ -35,6 +36,7 @@ const createCategory = async (req, res, next) => {
       descriptionEn: description_en || descriptionEn || (description ? description.trim() : null),
       descriptionHi: description_hi || descriptionHi || (description ? description.trim() : null),
       isActive: isActive !== undefined ? Boolean(isActive) : true,
+      imageUrl: finalImageUrl,
     });
 
     return sendSuccess(res, 'Category created successfully', { category }, 201);
@@ -50,7 +52,7 @@ const createCategory = async (req, res, next) => {
 const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image } = req.body;
 
     const category = await Category.findByPk(id);
 
@@ -88,6 +90,11 @@ const updateCategory = async (req, res, next) => {
       if (description_hi !== undefined || descriptionHi !== undefined) category.descriptionHi = (description_hi || descriptionHi || '').trim() || null;
     }
     if (isActive !== undefined) category.isActive = Boolean(isActive);
+
+    const providedImage = imageUrl !== undefined ? imageUrl : (image_url !== undefined ? image_url : image);
+    if (providedImage !== undefined) {
+      category.imageUrl = providedImage ? String(providedImage).trim() : null;
+    }
 
     await category.save();
 
