@@ -50,8 +50,19 @@ const uploadSingleVideo = multer({
   fileFilter: videoFileFilter,
 }).single('video');
 
+const uploadMultipleVideos = multer({
+  storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit per video
+    files: 5,                   // Up to 5 videos at once
+  },
+  fileFilter: videoFileFilter,
+}).array('videos', 5);
+
 module.exports = {
   uploadMultipleImages,
   uploadSingleImage,
   uploadSingleVideo,
+  uploadMultipleVideos,
 };
+

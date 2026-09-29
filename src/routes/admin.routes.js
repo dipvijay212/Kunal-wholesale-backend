@@ -35,12 +35,14 @@ const {
 const {
   uploadImages,
   uploadVideo,
+  uploadVideos,
   deleteMedia,
 } = require('../controllers/adminUpload.controller');
 
 const {
   uploadMultipleImages,
   uploadSingleVideo,
+  uploadMultipleVideos,
 } = require('../middleware/uploadMiddleware');
 
 const router = express.Router();
@@ -59,6 +61,7 @@ router.delete('/products/:id', deleteProduct);
 // --- Media Upload APIs (Cloudinary) ---
 router.post('/upload/images', uploadMultipleImages, uploadImages);
 router.post('/upload/video', uploadSingleVideo, uploadVideo);
+router.post('/upload/videos', uploadMultipleVideos, uploadVideos);
 router.delete('/upload/media', deleteMedia);
 
 // --- Category Admin APIs ---

@@ -160,6 +160,7 @@ const getProductBySlug = async (req, res, next) => {
           model: ProductImage,
           as: 'images',
           attributes: ['id', 'imageUrl', 'altText', 'displayOrder'],
+          separate: true,
           order: [['displayOrder', 'ASC']],
         },
       ],

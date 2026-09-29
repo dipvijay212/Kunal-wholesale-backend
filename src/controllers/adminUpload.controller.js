@@ -86,7 +86,7 @@ const uploadVideo = async (req, res, next) => {
       );
     }
 
-    const file = req.file;
+    const file = req.file || (req.files && req.files[0]);
     if (!file) {
       throw new AppError('No video file provided for upload.', 400);
     }
@@ -106,6 +106,56 @@ const uploadVideo = async (req, res, next) => {
         bytes: result.bytes,
         width: result.width,
         height: result.height,
+      },
+      201
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/admin/upload/videos
+ * Upload multiple product videos to Cloudinary
+ */
+const uploadVideos = async (req, res, next) => {
+  try {
+    if (!isCloudinaryConfigured()) {
+      throw new AppError(
+        'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in backend .env file.',
+        503
+      );
+    }
+
+    const files = req.files || (req.file ? [req.file] : []);
+    if (!files || files.length === 0) {
+      throw new AppError('No video files provided for upload.', 400);
+    }
+
+    const uploadPromises = files.map((file) =>
+      uploadBufferToCloudinary(file.buffer, {
+        resource_type: 'video',
+      })
+    );
+
+    const results = await Promise.all(uploadPromises);
+
+    const uploadedVideos = results.map((result) => ({
+      url: result.secure_url || result.url,
+      publicId: result.public_id,
+      duration: result.duration,
+      format: result.format,
+      bytes: result.bytes,
+      width: result.width,
+      height: result.height,
+    }));
+
+    return sendSuccess(
+      res,
+      `Successfully uploaded ${uploadedVideos.length} video(s) to Cloudinary`,
+      {
+        urls: uploadedVideos.map((v) => v.url),
+        videos: uploadedVideos,
       },
       201
     );
@@ -142,5 +192,6 @@ const deleteMedia = async (req, res, next) => {
 module.exports = {
   uploadImages,
   uploadVideo,
+  uploadVideos,
   deleteMedia,
 };

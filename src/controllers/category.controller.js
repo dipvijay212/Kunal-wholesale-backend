@@ -43,7 +43,26 @@ const getCategories = async (req, res, next) => {
     const categoriesWithImages = await Promise.all(
       categories.map(async (cat) => {
         const catJson = cat.toJSON();
-        if (!catJson.imageUrl) {
+        let isImageValidForCategory = false;
+
+        if (catJson.imageUrl) {
+          const imageBelongsToCategory = await ProductImage.findOne({
+            where: { imageUrl: catJson.imageUrl },
+            include: [
+              {
+                model: Product,
+                as: 'product',
+                where: { categoryId: cat.id, isAvailable: true },
+                required: true,
+              },
+            ],
+          });
+          if (imageBelongsToCategory) {
+            isImageValidForCategory = true;
+          }
+        }
+
+        if (!isImageValidForCategory) {
           const productWithImage = await Product.findOne({
             where: { categoryId: cat.id, isAvailable: true },
             include: [
@@ -51,19 +70,25 @@ const getCategories = async (req, res, next) => {
                 model: ProductImage,
                 as: 'images',
                 attributes: ['imageUrl', 'displayOrder'],
+                separate: true,
+                order: [['displayOrder', 'ASC']],
               },
             ],
-            order: [
-              ['id', 'DESC'],
-              [{ model: ProductImage, as: 'images' }, 'displayOrder', 'ASC'],
-            ],
+            order: [['id', 'DESC']],
           });
+
           if (
             productWithImage &&
             productWithImage.images &&
             productWithImage.images.length > 0
           ) {
             catJson.imageUrl = productWithImage.images[0].imageUrl;
+            Category.update({ imageUrl: catJson.imageUrl }, { where: { id: cat.id } }).catch(() => {});
+          } else {
+            catJson.imageUrl = null;
+            if (cat.imageUrl) {
+              Category.update({ imageUrl: null }, { where: { id: cat.id } }).catch(() => {});
+            }
           }
         }
         return catJson;
