@@ -1,4 +1,4 @@
-const { sequelize, Category } = require('../models');
+const { sequelize, Category, WebsiteSetting } = require('../models');
 
 /**
  * Columns added by later migrations that the app can run without. If a database has
@@ -9,6 +9,7 @@ const { sequelize, Category } = require('../models');
 const OPTIONAL_COLUMNS = [
   { model: Category, table: 'categories', attribute: 'seoTitle', column: 'seo_title' },
   { model: Category, table: 'categories', attribute: 'seoDescription', column: 'seo_description' },
+  { model: WebsiteSetting, table: 'website_settings', attribute: 'businessSettings', column: 'business_settings' },
 ];
 
 let checked;

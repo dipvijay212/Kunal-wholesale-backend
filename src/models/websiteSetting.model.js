@@ -33,6 +33,12 @@ module.exports = (sequelize) => {
         defaultValue: true,
         field: 'allow_customer_language_switch',
       },
+      // Contact details from Admin → Settings; null until first saved (see business settings controller).
+      businessSettings: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        field: 'business_settings',
+      },
     },
     {
       tableName: 'website_settings',

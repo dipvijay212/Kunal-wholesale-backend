@@ -30,6 +30,7 @@ const {
 const {
   getAdminLanguageSettings,
   updateAdminLanguageSettings,
+  updateAdminBusinessSettings,
 } = require('../controllers/setting.controller');
 
 const {
@@ -81,5 +82,6 @@ router.get('/customers/:id', getAdminCustomerById);
 // --- Settings Admin APIs ---
 router.get('/settings/language', getAdminLanguageSettings);
 router.patch('/settings/language', updateAdminLanguageSettings);
+router.patch('/settings/business', updateAdminBusinessSettings);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+const { englishOnlyHooks } = require('../utils/englishOnly');
 
 module.exports = (sequelize) => {
   const OrderItem = sequelize.define(
@@ -74,6 +75,8 @@ module.exports = (sequelize) => {
       tableName: 'order_items',
       timestamps: true,
       underscored: true,
+      // Order snapshots keep the English product name only (orders are never rejected).
+      hooks: englishOnlyHooks({ hindiFields: ['productNameHi'] }),
     }
   );
 

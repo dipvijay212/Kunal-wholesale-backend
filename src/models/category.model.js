@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+const { englishOnlyHooks } = require('../utils/englishOnly');
 const { cloudinaryUrlValidator } = require('../utils/mediaUrl');
 
 module.exports = (sequelize) => {
@@ -80,6 +81,18 @@ module.exports = (sequelize) => {
       tableName: 'categories',
       timestamps: true,
       underscored: true,
+      // English-only catalogue: *_hi columns stay NULL and Hindi script is rejected.
+      hooks: englishOnlyHooks({
+        hindiFields: ['nameHi', 'descriptionHi'],
+        englishFields: {
+          name: 'Category name',
+          nameEn: 'Category name',
+          description: 'Category description',
+          descriptionEn: 'Category description',
+          seoTitle: 'SEO title',
+          seoDescription: 'SEO description',
+        },
+      }),
     }
   );
 
