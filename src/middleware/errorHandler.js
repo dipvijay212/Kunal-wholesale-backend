@@ -10,7 +10,7 @@ const errorHandler = (err, req, res, next) => {
   // Handle Sequelize Validation Errors
   if (err.name === 'SequelizeValidationError') {
     statusCode = 400;
-    message = 'Validation error';
+    message = err.errors?.[0]?.message || 'Validation error';
     errorDetails = err.errors ? err.errors.reduce((acc, curr) => {
       acc[curr.path] = curr.message;
       return acc;

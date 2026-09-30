@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const routes = require('./routes');
 const notFoundHandler = require('./middleware/notFoundHandler');
 const errorHandler = require('./middleware/errorHandler');
+const { ensureOptionalColumns } = require('./utils/optionalColumns');
 
 const app = express();
 
@@ -71,6 +72,11 @@ app.get('/', (req, res) => {
     message: 'Kunal Sarees Wholesale API is active and running',
     timestamp: new Date().toISOString(),
   });
+});
+
+// Skip columns from migrations that haven't run yet (checked once per process)
+app.use('/api', (req, res, next) => {
+  ensureOptionalColumns().then(() => next(), () => next());
 });
 
 // Mount API routes under /api

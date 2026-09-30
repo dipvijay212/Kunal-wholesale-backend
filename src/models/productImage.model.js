@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+const { cloudinaryUrlValidator } = require('../utils/mediaUrl');
 
 module.exports = (sequelize) => {
   const ProductImage = sequelize.define(
@@ -24,6 +25,7 @@ module.exports = (sequelize) => {
         field: 'image_url',
         validate: {
           notEmpty: { msg: 'Image URL is required' },
+          isCloudinaryUrl: cloudinaryUrlValidator,
         },
       },
       altText: {

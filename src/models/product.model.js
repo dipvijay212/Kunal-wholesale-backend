@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+const { cloudinaryUrlListValidator } = require('../utils/mediaUrl');
 
 module.exports = (sequelize) => {
   const Product = sequelize.define(
@@ -156,6 +157,7 @@ module.exports = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
         field: 'video_url',
+        validate: { isCloudinaryUrlList: cloudinaryUrlListValidator },
       },
     },
     {

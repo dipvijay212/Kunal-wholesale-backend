@@ -1,4 +1,5 @@
 const { DataTypes } = require('sequelize');
+const { cloudinaryUrlValidator } = require('../utils/mediaUrl');
 
 module.exports = (sequelize) => {
   const Category = sequelize.define(
@@ -59,6 +60,20 @@ module.exports = (sequelize) => {
         type: DataTypes.TEXT,
         allowNull: true,
         field: 'image_url',
+        validate: { isCloudinaryUrl: cloudinaryUrlValidator },
+      },
+      // Optional SEO overrides; the storefront generates both when empty.
+      seoTitle: {
+        type: DataTypes.STRING(120),
+        allowNull: true,
+        field: 'seo_title',
+        validate: { len: { args: [0, 120], msg: 'SEO title must be 120 characters or fewer' } },
+      },
+      seoDescription: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: 'seo_description',
+        validate: { len: { args: [0, 320], msg: 'SEO description must be 320 characters or fewer' } },
       },
     },
     {

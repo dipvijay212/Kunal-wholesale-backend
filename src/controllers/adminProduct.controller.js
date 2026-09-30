@@ -207,7 +207,7 @@ const createProduct = async (req, res, next) => {
         }));
 
       if (imageData.length > 0) {
-        await ProductImage.bulkCreate(imageData, { transaction });
+        await ProductImage.bulkCreate(imageData, { transaction, validate: true });
       }
     }
 
@@ -459,7 +459,7 @@ const updateProduct = async (req, res, next) => {
         }));
 
       if (imageData.length > 0) {
-        await ProductImage.bulkCreate(imageData, { transaction });
+        await ProductImage.bulkCreate(imageData, { transaction, validate: true });
       }
     }
 

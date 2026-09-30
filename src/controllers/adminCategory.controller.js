@@ -2,13 +2,21 @@ const { Category } = require('../models');
 const { sendSuccess } = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
 
+/** Optional SEO override: trimmed text, or null to fall back to auto-generated SEO. */
+const optionalText = (...values) => {
+  const value = values.find((v) => v !== undefined);
+  if (value === undefined) return undefined;
+  const trimmed = value === null ? '' : String(value).trim();
+  return trimmed || null;
+};
+
 /**
  * POST /api/admin/categories
  * Create a new saree category
  */
 const createCategory = async (req, res, next) => {
   try {
-    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image, seoTitle, seo_title, seoDescription, seo_description } = req.body;
     const finalImageUrl = imageUrl || image_url || image || null;
 
     const finalNameHi = name_hi || nameHi || name;
@@ -37,6 +45,8 @@ const createCategory = async (req, res, next) => {
       descriptionHi: description_hi || descriptionHi || (description ? description.trim() : null),
       isActive: isActive !== undefined ? Boolean(isActive) : true,
       imageUrl: finalImageUrl,
+      seoTitle: optionalText(seoTitle, seo_title) ?? null,
+      seoDescription: optionalText(seoDescription, seo_description) ?? null,
     });
 
     return sendSuccess(res, 'Category created successfully', { category }, 201);
@@ -52,7 +62,7 @@ const createCategory = async (req, res, next) => {
 const updateCategory = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image } = req.body;
+    const { name, name_en, nameEn, name_hi, nameHi, slug, description, description_en, descriptionEn, description_hi, descriptionHi, isActive, imageUrl, image_url, image, seoTitle, seo_title, seoDescription, seo_description } = req.body;
 
     const category = await Category.findByPk(id);
 
@@ -95,6 +105,11 @@ const updateCategory = async (req, res, next) => {
     if (providedImage !== undefined) {
       category.imageUrl = providedImage ? String(providedImage).trim() : null;
     }
+
+    const providedSeoTitle = optionalText(seoTitle, seo_title);
+    if (providedSeoTitle !== undefined) category.seoTitle = providedSeoTitle;
+    const providedSeoDescription = optionalText(seoDescription, seo_description);
+    if (providedSeoDescription !== undefined) category.seoDescription = providedSeoDescription;
 
     await category.save();
 

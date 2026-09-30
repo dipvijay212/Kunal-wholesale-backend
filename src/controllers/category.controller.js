@@ -1,5 +1,6 @@
 const { Category, Product, sequelize } = require('../models');
 const { sendSuccess } = require('../utils/apiResponse');
+const { hasAttribute } = require('../utils/optionalColumns');
 
 /**
  * GET /api/categories
@@ -19,6 +20,7 @@ const getCategories = async (req, res, next) => {
         'descriptionEn',
         'descriptionHi',
         'imageUrl',
+        ...['seoTitle', 'seoDescription'].filter((attribute) => hasAttribute(Category, attribute)),
         'createdAt',
         'updatedAt',
         [

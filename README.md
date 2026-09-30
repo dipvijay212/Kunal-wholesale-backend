@@ -60,7 +60,7 @@ backend/
 Environment configuration is stored in `.env` (copied from `.env.example`):
 
 ```env
-PORT=5000
+PORT=5001
 NODE_ENV=development
 
 DB_HOST=localhost
@@ -113,7 +113,7 @@ CREATE DATABASE IF NOT EXISTS kunal_sarees CHARACTER SET utf8mb4 COLLATE utf8mb4
 
 ## 6. Health-Check URL
 
-- **URL**: `http://localhost:5000/api/health`
+- **URL**: `http://localhost:5001/api/health`
 - **Method**: `GET`
 
 ---
