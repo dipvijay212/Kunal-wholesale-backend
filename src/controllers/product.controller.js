@@ -119,9 +119,35 @@ const getProducts = async (req, res, next) => {
       includeClause[0].required = true;
     }
 
+    // Restrict product listing to card attributes (omitting large descriptions/videos)
+    const productAttributes = [
+      'id',
+      'name',
+      'nameEn',
+      'nameHi',
+      'slug',
+      'productCode',
+      'price',
+      'minimumOrderQuantity',
+      'stockQuantity',
+      'isAvailable',
+      'isFeatured',
+      'isNew',
+      'fabric',
+      'fabricEn',
+      'fabricHi',
+      'color',
+      'colorEn',
+      'colorHi',
+      'categoryId',
+      'createdAt',
+      'updatedAt',
+    ];
+
     // Query Products with findAndCountAll
     const { count, rows: products } = await Product.findAndCountAll({
       where: whereClause,
+      attributes: productAttributes,
       include: includeClause,
       order,
       limit,

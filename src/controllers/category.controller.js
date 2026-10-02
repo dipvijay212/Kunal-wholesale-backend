@@ -41,61 +41,47 @@ const getCategories = async (req, res, next) => {
       order: [['name', 'ASC']],
     });
 
-    const ProductImage = sequelize.models.ProductImage;
-    const categoriesWithImages = await Promise.all(
-      categories.map(async (cat) => {
-        const catJson = cat.toJSON();
-        let isImageValidForCategory = false;
+    // Identify categories lacking an image
+    const missingCategoryIds = categories
+      .filter((cat) => !cat.imageUrl)
+      .map((cat) => cat.id);
 
-        if (catJson.imageUrl) {
-          const imageBelongsToCategory = await ProductImage.findOne({
-            where: { imageUrl: catJson.imageUrl },
-            include: [
-              {
-                model: Product,
-                as: 'product',
-                where: { categoryId: cat.id, isAvailable: true },
-                required: true,
-              },
-            ],
-          });
-          if (imageBelongsToCategory) {
-            isImageValidForCategory = true;
-          }
+    const fallbackImagesByCat = {};
+    if (missingCategoryIds.length > 0) {
+      const { Op } = require('sequelize');
+      const ProductImage = sequelize.models.ProductImage;
+      const productsWithImages = await Product.findAll({
+        where: {
+          categoryId: { [Op.in]: missingCategoryIds },
+          isAvailable: true,
+        },
+        attributes: ['id', 'categoryId'],
+        include: [
+          {
+            model: ProductImage,
+            as: 'images',
+            attributes: ['imageUrl', 'displayOrder'],
+            order: [['displayOrder', 'ASC']],
+            separate: true,
+          },
+        ],
+        order: [['id', 'DESC']],
+      });
+
+      for (const prod of productsWithImages) {
+        if (!fallbackImagesByCat[prod.categoryId] && prod.images && prod.images.length > 0) {
+          fallbackImagesByCat[prod.categoryId] = prod.images[0].imageUrl;
         }
+      }
+    }
 
-        if (!isImageValidForCategory) {
-          const productWithImage = await Product.findOne({
-            where: { categoryId: cat.id, isAvailable: true },
-            include: [
-              {
-                model: ProductImage,
-                as: 'images',
-                attributes: ['imageUrl', 'displayOrder'],
-                separate: true,
-                order: [['displayOrder', 'ASC']],
-              },
-            ],
-            order: [['id', 'DESC']],
-          });
-
-          if (
-            productWithImage &&
-            productWithImage.images &&
-            productWithImage.images.length > 0
-          ) {
-            catJson.imageUrl = productWithImage.images[0].imageUrl;
-            Category.update({ imageUrl: catJson.imageUrl }, { where: { id: cat.id } }).catch(() => {});
-          } else {
-            catJson.imageUrl = null;
-            if (cat.imageUrl) {
-              Category.update({ imageUrl: null }, { where: { id: cat.id } }).catch(() => {});
-            }
-          }
-        }
-        return catJson;
-      })
-    );
+    const categoriesWithImages = categories.map((cat) => {
+      const catJson = cat.toJSON();
+      if (!catJson.imageUrl && fallbackImagesByCat[cat.id]) {
+        catJson.imageUrl = fallbackImagesByCat[cat.id];
+      }
+      return catJson;
+    });
 
     return sendSuccess(res, 'Categories fetched successfully', {
       categories: categoriesWithImages,
