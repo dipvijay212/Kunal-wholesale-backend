@@ -9,13 +9,23 @@ const SUPPORTED_LANGUAGES = ['hi', 'en'];
  * Helper to ensure at least one setting row exists
  */
 const getOrCreateSettings = async () => {
-  let settings = await WebsiteSetting.findOne();
+  let settings = await WebsiteSetting.findOne({ order: [['id', 'ASC']] });
   if (!settings) {
     settings = await WebsiteSetting.create({
       defaultLanguage: 'hi',
       availableLanguages: ['hi', 'en'],
       allowCustomerLanguageSwitch: true,
     });
+  }
+  // Clean up any historical duplicate rows in website_settings to guarantee singleton behavior
+  try {
+    const allRows = await WebsiteSetting.findAll({ order: [['id', 'ASC']] });
+    if (allRows.length > 1) {
+      const { Op } = require('sequelize');
+      await WebsiteSetting.destroy({ where: { id: { [Op.ne]: allRows[0].id } } });
+    }
+  } catch (err) {
+    // Non-fatal cleanup check
   }
   return settings;
 };
