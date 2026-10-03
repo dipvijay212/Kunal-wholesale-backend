@@ -149,6 +149,11 @@ const sanitizeBusinessSettings = (input = {}) => {
     }))
     .filter((link) => SOCIAL_PLATFORMS.includes(link.platform) && /^https:\/\//i.test(link.href));
 
+  const storefrontImages = input.storefrontImages || input.images || {};
+  const heroImage = text(storefrontImages.heroImage, 1000) || null;
+  const wholesaleBannerImage = text(storefrontImages.wholesaleBannerImage, 1000) || null;
+  const whyChooseUsImage = text(storefrontImages.whyChooseUsImage, 1000) || null;
+
   return {
     businessName: text(input.businessName, 80) || null,
     contact: {
@@ -165,6 +170,11 @@ const sanitizeBusinessSettings = (input = {}) => {
       hours,
     },
     social,
+    storefrontImages: {
+      heroImage,
+      wholesaleBannerImage,
+      whyChooseUsImage,
+    },
   };
 };
 
