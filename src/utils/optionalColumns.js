@@ -17,9 +17,13 @@ let checked;
 const ensureOptionalColumns = () => {
   if (!checked) {
     checked = (async () => {
-      const tables = {};
+      // Look up each table once, in parallel (this runs before the first request of a cold start).
+      const tableNames = [...new Set(OPTIONAL_COLUMNS.map((entry) => entry.table))];
+      const descriptions = await Promise.all(
+        tableNames.map((table) => sequelize.getQueryInterface().describeTable(table))
+      );
+      const tables = Object.fromEntries(tableNames.map((table, index) => [table, descriptions[index]]));
       for (const { model, table, attribute, column } of OPTIONAL_COLUMNS) {
-        tables[table] = tables[table] || (await sequelize.getQueryInterface().describeTable(table));
         if (!tables[table][column] && model.rawAttributes[attribute]) {
           model.removeAttribute(attribute);
           console.warn(`[Schema] ${table}.${column} is missing — run "npm run db:migrate" to enable it.`);
