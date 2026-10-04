@@ -90,24 +90,43 @@ const getAdminOrders = async (req, res, next) => {
  */
 const getAdminOrderById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const numericId = parseInt(id, 10);
+    const isNumeric = !isNaN(numericId) && String(numericId) === String(id).trim();
 
-    const order = await Order.findByPk(id, {
-      include: [
-        {
-          model: OrderItem,
-          as: 'items',
+    const order = isNumeric
+      ? await Order.findByPk(numericId, {
           include: [
             {
-              model: Product,
-              as: 'product',
-              attributes: ['id', 'name', 'slug', 'productCode', 'fabric', 'color', 'isAvailable'],
-              paranoid: false, // Include soft-deleted products for historical audit
+              model: OrderItem,
+              as: 'items',
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'slug', 'productCode', 'fabric', 'color', 'isAvailable'],
+                  paranoid: false, // Include soft-deleted products for historical audit
+                },
+              ],
             },
           ],
-        },
-      ],
-    });
+        })
+      : await Order.findOne({
+          where: { orderNumber: id },
+          include: [
+            {
+              model: OrderItem,
+              as: 'items',
+              include: [
+                {
+                  model: Product,
+                  as: 'product',
+                  attributes: ['id', 'name', 'slug', 'productCode', 'fabric', 'color', 'isAvailable'],
+                  paranoid: false,
+                },
+              ],
+            },
+          ],
+        });
 
     if (!order) {
       throw new AppError('Order not found.', 404, { id });
@@ -141,7 +160,13 @@ const updateOrderStatus = async (req, res, next) => {
       );
     }
 
-    const order = await Order.findByPk(id);
+    const numericId = parseInt(id, 10);
+    const isNumeric = !isNaN(numericId) && String(numericId) === String(id).trim();
+
+    let order = isNumeric ? await Order.findByPk(numericId) : null;
+    if (!order) {
+      order = await Order.findOne({ where: { orderNumber: id } });
+    }
 
     if (!order) {
       throw new AppError('Order not found.', 404, { id });

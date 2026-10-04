@@ -141,6 +141,11 @@ const sanitizeBusinessSettings = (input = {}) => {
     throw new AppError('Please enter a valid email address.', 400);
   }
 
+  let mapUrl = text(contact.mapUrl, 1000);
+  if (mapUrl && !/^https?:\/\//i.test(mapUrl)) {
+    mapUrl = `https://${mapUrl}`;
+  }
+
   const lines = (Array.isArray(address.lines) ? address.lines : String(address.lines || '').split('\n'))
     .map((line) => text(line, 120))
     .filter(Boolean)
@@ -170,6 +175,7 @@ const sanitizeBusinessSettings = (input = {}) => {
       whatsappNumber: whatsappNumber || null,
       phoneDisplay: text(contact.phoneDisplay, 40) || null,
       email: email || null,
+      mapUrl: mapUrl || null,
       address: {
         lines,
         city: text(address.city, 60),
