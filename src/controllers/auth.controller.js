@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const { User, Customer, sequelize } = require('../models');
 const { sendSuccess } = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
-const { generateToken } = require('../utils/jwt');
+const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { sendPasswordResetEmail } = require('../services/email.service');
 
 /**
@@ -61,8 +61,13 @@ const login = async (req, res, next) => {
       throw new AppError('Invalid email or password.', 401);
     }
 
-    // 5. Generate JWT token
+    // 5. Generate JWT access token & long-lived refresh token
     const token = generateToken({
+      userId: user.id,
+      role: user.role,
+    });
+
+    const refreshToken = generateRefreshToken({
       userId: user.id,
       role: user.role,
     });
@@ -76,6 +81,7 @@ const login = async (req, res, next) => {
         isActive: user.isActive,
       },
       token,
+      refreshToken,
     });
   } catch (error) {
     next(error);
@@ -422,8 +428,68 @@ const getMe = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/auth/refresh-token
+ * Validates the refresh token and returns a new access token and renewed refresh token
+ */
+const refreshToken = async (req, res, next) => {
+  try {
+    const tokenHeader = req.headers['x-refresh-token'];
+    const incomingRefreshToken = (req.body && req.body.refreshToken) || tokenHeader;
+
+    if (!incomingRefreshToken) {
+      throw new AppError('Refresh token is required.', 400);
+    }
+
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(incomingRefreshToken);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        throw new AppError('Refresh token has expired. Please log in again.', 401);
+      }
+      throw new AppError('Invalid refresh token. Please log in again.', 401);
+    }
+
+    const user = await User.findByPk(decoded.userId);
+    if (!user) {
+      throw new AppError('User belonging to this token no longer exists.', 401);
+    }
+
+    if (!user.isActive) {
+      throw new AppError('Your account has been deactivated.', 403);
+    }
+
+    // Issue fresh access token and renewed refresh token
+    const newAccessToken = generateToken({
+      userId: user.id,
+      role: user.role,
+    });
+
+    const newRefreshToken = generateRefreshToken({
+      userId: user.id,
+      role: user.role,
+    });
+
+    return sendSuccess(res, 'Token refreshed successfully', {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
+  refreshToken,
   register,
   getMe,
   forgotPassword,

@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   login,
+  refreshToken,
   register,
   getMe,
   forgotPassword,
@@ -13,6 +14,10 @@ const router = express.Router();
 
 // POST /api/auth/login
 router.post('/login', login);
+
+// POST /api/auth/refresh-token & /api/auth/refresh
+router.post('/refresh-token', refreshToken);
+router.post('/refresh', refreshToken);
 
 // Password reset routes (Resend Email)
 router.post('/forgot-password', forgotPassword);
