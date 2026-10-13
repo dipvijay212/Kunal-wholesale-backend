@@ -176,6 +176,15 @@ const createOrder = async (req, res, next) => {
         );
       }
 
+      // Sarees are sold in full sets only: quantity must be a whole multiple of the set size (MOQ)
+      if (parsedQty % moq !== 0) {
+        throw new AppError(
+          `'${product.name}' is sold in sets of ${moq}. Please order ${moq}, ${moq * 2}, ${moq * 3}... pieces. You requested ${parsedQty}.`,
+          400,
+          { productId, productCode: product.productCode, minimumOrderQuantity: moq, requestedQuantity: parsedQty }
+        );
+      }
+
       // Calculate unit price and subtotal from MySQL DB (NEVER trust frontend prices)
       const unitPrice = parseFloat(product.price);
       const lineSubtotal = parseFloat((unitPrice * parsedQty).toFixed(2));
